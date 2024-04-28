@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -17,6 +18,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,8 +53,8 @@ fun NyoomApp(preferencesDataStore: PreferencesDataStore) {
     //val preferencesDataStore = PreferencesDataStore(context = this)
     NavHost(navController, startDestination = "intro") {
         composable("intro") { IntroScreen(navController) }
-        composable("cuisine") { CuisineScreen(navController, preferencesDataStore = preferencesDataStore) }
-        composable("suggestions") { SuggestionsScreen(navController) } // Add this line
+        composable("cuisine") { CuisineScreen(navController, preferencesDataStore) }
+        composable("suggestions") { SuggestionsScreen(navController, preferencesDataStore) } // Add this line
         composable("food") { ResultsScreenFood(navController)}
         composable("drinks") { ResultsScreenDrinks(navController) }
         composable("rerollfood"){ ReRollFood(navController)}
@@ -122,14 +124,27 @@ fun CuisineScreen(navController: NavController, preferencesDataStore: Preference
 }
 
 @Composable
-fun SuggestionsScreen(navController: NavController) {
+fun SuggestionsScreen(navController: NavController, preferencesDataStore: PreferencesDataStore) {
+    val preferences by preferencesDataStore.preferences.collectAsState(initial = emptyList())
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        Text("Your Preferences", style = MaterialTheme.typography.headlineSmall)
+        Spacer(modifier = Modifier.height(8.dp))
+
+        if (preferences.isNotEmpty()) {
+            PreferenceItem(label = "Cuisine:", value = preferences[0])
+            PreferenceItem(label = "Atmosphere:", value = preferences[1])
+            PreferenceItem(label = "Favorite Dish:", value = preferences[2])
+        } else {
+            Text("No preferences found")
+        }
+        Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = { navController.navigate("food") }) {
             Text("Suggest Me Food")
         }
@@ -137,6 +152,18 @@ fun SuggestionsScreen(navController: NavController) {
         Button(onClick = { navController.navigate("drinks") }) {
             Text("Suggest Me Drinks")
         }
+    }
+}
+
+@Composable
+fun PreferenceItem(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+
+        Text(text = "$label ", style = MaterialTheme.typography.bodyLarge)
+        Text(text = value, style = MaterialTheme.typography.bodyLarge)
     }
 }
 
