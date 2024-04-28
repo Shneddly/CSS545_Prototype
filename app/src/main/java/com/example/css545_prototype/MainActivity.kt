@@ -20,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,22 +32,26 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+    private val preferencesDataStore by lazy { PreferencesDataStore(context = this)}
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            NyoomApp()
+
+            NyoomApp(preferencesDataStore = preferencesDataStore)
         }
     }
 }
 
 @Composable
-fun NyoomApp() {
+fun NyoomApp(preferencesDataStore: PreferencesDataStore) {
     val navController = rememberNavController()
+    //val preferencesDataStore = PreferencesDataStore(context = this)
     NavHost(navController, startDestination = "intro") {
         composable("intro") { IntroScreen(navController) }
-        composable("cuisine") { CuisineScreen(navController) }
+        composable("cuisine") { CuisineScreen(navController, preferencesDataStore = preferencesDataStore) }
         composable("suggestions") { SuggestionsScreen(navController) } // Add this line
         composable("food") { ResultsScreenFood(navController)}
         composable("drinks") { ResultsScreenDrinks(navController) }
@@ -71,10 +76,12 @@ fun IntroScreen(navController: NavController) {
 }
 
 @Composable
-fun CuisineScreen(navController: NavController) {
+fun CuisineScreen(navController: NavController, preferencesDataStore: PreferencesDataStore) {
     var cuisine by remember { mutableStateOf("") }
     var atmosphere by remember { mutableStateOf("") }
     var favoriteDish by remember { mutableStateOf("") }
+
+    val coroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -104,7 +111,10 @@ fun CuisineScreen(navController: NavController) {
         Button(onClick = {
             // implement the logic to save these preferences later, for now println
             println("Preferences saved: Cuisine=$cuisine, Atmosphere=$atmosphere, Dish=$favoriteDish")
-            navController.navigate("suggestions")
+            coroutineScope.launch {
+                preferencesDataStore.savePreferences(cuisine, atmosphere, favoriteDish)
+                navController.navigate("suggestions")
+            }
         }) {
             Text("Save Preferences")
         }
