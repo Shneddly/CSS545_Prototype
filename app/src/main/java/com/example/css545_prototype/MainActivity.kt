@@ -197,16 +197,13 @@ fun ResultsScreenFood(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("NUE", fontSize = 25.sp, fontWeight = FontWeight.Bold);
-        Text("1519 14th Ave,");
-        Text("Seattle, WA 98122");
+        Text("NUE", fontSize = 25.sp, fontWeight = FontWeight.Bold)
+        Text("1519 14th Ave,")
+        Text("Seattle, WA 98122")
 
 
     Spacer(modifier = Modifier.height(16.dp))
     Row {
-        /*Button(onClick = { navController.navigate("food") }) {
-            Text("Take me!")
-        }*/
         TakeMeButton("https://www.google.com/maps/place/Nue/@47.6147255,-122.317023,17z/data=!4m6!3m5!1s0x54906acdfa55ddcf:0xaa8c3f43520ea04d!8m2!3d47.6147255!4d-122.3144481!16s%2Fg%2F11b6ds3khs?entry=ttu")
         Button(onClick = { navController.navigate("rerollfood") }) {
             Text("Re-Roll")
@@ -224,9 +221,18 @@ fun ReRollFood(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Dick's Drive-In", fontSize = 25.sp, fontWeight = FontWeight.Bold);
-        Text("115 Broadway E,");
-        Text("Seattle, WA 98102");
+        Text("Dick's Drive-In", fontSize = 25.sp, fontWeight = FontWeight.Bold)
+        Text("115 Broadway E,")
+        Text("Seattle, WA 98102")
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+    Row {
+
+        TakeMeButton("https://www.google.com/maps/place/Dick's+Drive-In/@47.6193299,-122.3238012,16z/data=!3m1!4b1!4m6!3m5!1s0x549015329205c2e9:0xf9777b670a3cbaf3!8m2!3d47.6193263!4d-122.3212263!16s%2Fg%2F1tz75p2y?entry=ttu")
+        Button(onClick = { navController.navigate("rerollfood") }) {
+            Text("food")
+        }
     }
 }
 
@@ -239,9 +245,18 @@ fun ResultsScreenDrinks(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Montana", fontSize = 50.sp, fontWeight = FontWeight.Bold);
-        Text("1506 E Olive Wy,");
-        Text("Seattle, WA 98122");
+        Text("Montana", fontSize = 50.sp, fontWeight = FontWeight.Bold)
+        Text("1506 E Olive Wy,")
+        Text("Seattle, WA 98122")
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+    Row {
+
+        TakeMeButton("https://www.google.com/maps/place/Montana/@47.617937,-122.3289392,16z/data=!3m2!4b1!5s0x549015337cbb9cf3:0x688e338ef8064f36!4m6!3m5!1s0x549015337b1595b7:0x2c2cc746034b4db2!8m2!3d47.6179334!4d-122.3263643!16s%2Fg%2F12632gdn1?entry=ttu")
+        Button(onClick = { navController.navigate("rerolldrinks") }) {
+            Text("Re-Roll")
+        }
     }
 }
 
@@ -254,9 +269,17 @@ fun ReRollDrinks(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("The Sloop Tavern", fontSize = 50.sp, fontWeight = FontWeight.Bold);
-        Text("2830 NW Market St,");
-        Text("Seattle, WA 98107");
+        Text("The Sloop Tavern", fontSize = 50.sp, fontWeight = FontWeight.Bold)
+        Text("2830 NW Market St,")
+        Text("Seattle, WA 98107")
+    }
+
+    Spacer(modifier = Modifier.height(16.dp))
+    Row {
+        TakeMeButton("https://www.google.com/maps/place/Sloop+Tavern/@47.668875,-122.3968926,16z/data=!3m1!4b1!4m6!3m5!1s0x549015c30b4b0001:0x8ac88ca10fd82d46!8m2!3d47.6688714!4d-122.3943177!16s%2Fg%2F1wk4cs0s?entry=ttu")
+        Button(onClick = { navController.navigate("drinks") }) {
+            Text("Re-Roll")
+        }
     }
 }
 
