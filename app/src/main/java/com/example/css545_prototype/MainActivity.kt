@@ -187,7 +187,7 @@ fun TakeMeButton(url: String) {
     }
 }
 
-//All Below Functions are HardCoded!!!!! for prototype
+//All Below Functions are HardCoded!! for prototype
 @Composable
 fun ResultsScreenFood(navController: NavController) {
     Column(
