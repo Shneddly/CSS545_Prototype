@@ -1,10 +1,16 @@
 package com.example.css545_prototype
 
+import android.Manifest
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.Location
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +23,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -27,10 +35,13 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.google.android.gms.location.LocationServices
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -54,6 +65,47 @@ fun NyoomApp() {
         composable("rerolldrinks"){ ReRollDrinks(navController)}
     }
 }
+
+@Composable
+fun LocationAwareContent(onLocation: @Composable (Location?) -> Unit) {
+    val context = LocalContext.current
+    val locationState = remember { mutableStateOf<Location?>(null) }
+    val permissionState = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                fetchLocation(context, locationState)
+            } else {
+                locationState.value = null // Handle permission denial by setting location to null
+            }
+        }
+    )
+
+    LaunchedEffect(key1 = true) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            permissionState.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        } else {
+            fetchLocation(context, locationState)
+        }
+    }
+
+    // Observe locationState for changes and pass it to onLocation lambda
+    locationState.value?.let {
+        onLocation(it)
+    }
+}
+
+fun fetchLocation(context: Context, locationState: MutableState<Location?>) {
+    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+    if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
+            locationState.value = location
+        }
+    }
+}
+
+
+
 
 @Composable
 fun IntroScreen(navController: NavController) {
@@ -110,25 +162,34 @@ fun CuisineScreen(navController: NavController) {
         }
     }
 }
-
 @Composable
 fun SuggestionsScreen(navController: NavController) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Button(onClick = { navController.navigate("food") }) {
-            Text("Suggest Me Food")
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { navController.navigate("drinks") }) {
-            Text("Suggest Me Drinks")
+        // Ensure that the lambda is recognized as a composable lambda
+        LocationAwareContent { location ->
+            // This block is explicitly composable, so operations here should be valid
+            location?.let {
+                Text("Current Location: Lat ${it.latitude}, Long ${it.longitude}")
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = { navController.navigate("food") }) {
+                    Text("Suggest Me Food")
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = { navController.navigate("drinks") }) {
+                    Text("Suggest Me Drinks")
+                }
+            } ?: Text("Location permission needed or location is unavailable.")
         }
     }
 }
+
+
+
+
 
 // Takes user to google maps
 //
@@ -160,9 +221,9 @@ fun ResultsScreenFood(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("NUE", fontSize = 25.sp, fontWeight = FontWeight.Bold);
-        Text("1519 14th Ave,");
-        Text("Seattle, WA 98122");
+        Text("NUE", fontSize = 25.sp, fontWeight = FontWeight.Bold)
+        Text("1519 14th Ave,")
+        Text("Seattle, WA 98122")
 
 
     Spacer(modifier = Modifier.height(16.dp))
@@ -187,9 +248,9 @@ fun ReRollFood(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Dick's Drive-In", fontSize = 25.sp, fontWeight = FontWeight.Bold);
-        Text("115 Broadway E,");
-        Text("Seattle, WA 98102");
+        Text("Dick's Drive-In", fontSize = 25.sp, fontWeight = FontWeight.Bold)
+        Text("115 Broadway E,")
+        Text("Seattle, WA 98102")
     }
 }
 
@@ -202,9 +263,9 @@ fun ResultsScreenDrinks(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Montana", fontSize = 50.sp, fontWeight = FontWeight.Bold);
-        Text("1506 E Olive Wy,");
-        Text("Seattle, WA 98122");
+        Text("Montana", fontSize = 50.sp, fontWeight = FontWeight.Bold)
+        Text("1506 E Olive Wy,")
+        Text("Seattle, WA 98122")
     }
 }
 
@@ -217,9 +278,9 @@ fun ReRollDrinks(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("The Sloop Tavern", fontSize = 50.sp, fontWeight = FontWeight.Bold);
-        Text("2830 NW Market St,");
-        Text("Seattle, WA 98107");
+        Text("The Sloop Tavern", fontSize = 50.sp, fontWeight = FontWeight.Bold)
+        Text("2830 NW Market St,")
+        Text("Seattle, WA 98107")
     }
 }
 
