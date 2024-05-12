@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -24,7 +25,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,40 +69,44 @@ fun NyoomApp() {
 @Composable
 fun LocationAwareContent(onLocation: @Composable (Location?) -> Unit) {
     val context = LocalContext.current
-    val locationState = remember { mutableStateOf<Location?>(null) }
-    val permissionState = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { isGranted ->
-            if (isGranted) {
-                fetchLocation(context, locationState)
-            } else {
-                locationState.value = null // Handle permission denial by setting location to null
-            }
+    var location by remember { mutableStateOf<Location?>(null) }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            fetchLocation(context) { loc -> location = loc }
+        } else {
+            location = null // Handle permission denial by setting location to null
         }
-    )
+    }
 
     LaunchedEffect(key1 = true) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            permissionState.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         } else {
-            fetchLocation(context, locationState)
+            fetchLocation(context) { loc -> location = loc }
         }
     }
 
-    // Observe locationState for changes and pass it to onLocation lambda
-    locationState.value?.let {
+    // Observe location changes and pass it to onLocation lambda
+    location?.let {
         onLocation(it)
-    }
+    } ?: onLocation(null)
 }
 
-fun fetchLocation(context: Context, locationState: MutableState<Location?>) {
+fun fetchLocation(context: Context, onLocationFetched: (Location?) -> Unit) {
     val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
     if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            locationState.value = location
+        fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+            onLocationFetched(location)
+        }.addOnFailureListener {
+            Log.e("LocationError", "Failed to get location", it)
+            onLocationFetched(null)
         }
     }
 }
+
+
 
 
 
@@ -114,7 +118,7 @@ fun IntroScreen(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("nyoom", style = MaterialTheme.typography.headlineMedium)
+        Text("Nyoom", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = { navController.navigate("cuisine") }) {
             Text("Let's Go!")
@@ -169,11 +173,9 @@ fun SuggestionsScreen(navController: NavController) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Ensure that the lambda is recognized as a composable lambda
         LocationAwareContent { location ->
-            // This block is explicitly composable, so operations here should be valid
-            location?.let {
-                Text("Current Location: Lat ${it.latitude}, Long ${it.longitude}")
+            if (location != null) {
+                Text("Current Location: Lat ${location.latitude}, Long ${location.longitude}")
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(onClick = { navController.navigate("food") }) {
                     Text("Suggest Me Food")
@@ -182,10 +184,17 @@ fun SuggestionsScreen(navController: NavController) {
                 Button(onClick = { navController.navigate("drinks") }) {
                     Text("Suggest Me Drinks")
                 }
-            } ?: Text("Location permission needed or location is unavailable.")
+            } else {
+                Text("Location permission needed or location is unavailable.")
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = { /* trigger location fetching again or open settings */ }) {
+                    Text("Retry Fetching Location")
+                }
+            }
         }
     }
 }
+
 
 
 
