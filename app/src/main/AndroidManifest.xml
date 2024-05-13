@@ -29,13 +29,5 @@
             </intent-filter>
         </activity>
 
-        <!-- Declare your service here -->
-        <service
-            android:name=".MyNavigationService"
-            android:foregroundServiceType="location"
-            android:exported="false"> <!-- Ensure to set exported as needed -->
-            <!-- Additional inner elements if needed -->
-        </service>
-
     </application>
 </manifest>
