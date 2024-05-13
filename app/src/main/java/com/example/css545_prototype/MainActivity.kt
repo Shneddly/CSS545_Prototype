@@ -5,6 +5,8 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,20 +15,28 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role.Companion.Checkbox
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,8 +59,8 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun NyoomApp(preferencesDataStore: PreferencesDataStore) {
+
     val navController = rememberNavController()
-    //val preferencesDataStore = PreferencesDataStore(context = this)
     NavHost(navController, startDestination = "intro") {
         composable("intro") { IntroScreen(navController) }
         composable("cuisine") { CuisineScreen(navController, preferencesDataStore) }
@@ -79,53 +89,151 @@ fun IntroScreen(navController: NavController) {
 
 @Composable
 fun CuisineScreen(navController: NavController, preferencesDataStore: PreferencesDataStore) {
-    var cuisine by remember { mutableStateOf("") }
-    var atmosphere by remember { mutableStateOf("") }
-    var favoriteDish by remember { mutableStateOf("") }
+    val cuisineOptions = listOf("Italian", "Mexican", "Chinese", "Indian", "Japanese")
+    val atmosphereOptions = listOf("Casual", "Formal", "Outdoor", "Indoor")
+    val favoriteDishOptions = listOf("Pizza", "Sushi", "Burger")
+
+    val cuisineMappings = mapOf(
+        "Italian" to "italian_restaurant",
+        "Mexican" to "mexican_restaurant",
+        "Chinese" to "chinese_restaurant",
+        "Indian" to "indian_restaurant",
+        "Japanese" to "japanese_restaurant"
+    )
+
+    val atmosphereMappings = mapOf(
+        "Casual" to "casual",
+        "Formal" to "formal",
+        "Outdoor" to "outdoor",
+        "Indoor" to "indoor"
+    )
+
+    val dishMappings = mapOf(
+        "Pizza" to "pizza_restaurant",
+        "Sushi" to "sushi_restaurant",
+        "Burger" to "hamburger_restaurant"
+    )
+
+    val savedCuisines = preferencesDataStore.cuisinesFlow.collectAsState(initial = emptySet())
+    val savedAtmospheres = preferencesDataStore.atmospheresFlow.collectAsState(initial = emptySet())
+    val savedDishes = preferencesDataStore.favoriteDishesFlow.collectAsState(initial = emptySet())
+
+    val selectedCuisines = remember { mutableStateListOf<String>() }
+    val selectedAtmospheres = remember { mutableStateListOf<String>() }
+    val selectedDishes = remember { mutableStateListOf<String>() }
+
+    LaunchedEffect(savedCuisines, savedAtmospheres, savedDishes) {
+        selectedCuisines.clear()
+        selectedCuisines.addAll(savedCuisines.value)
+        selectedAtmospheres.clear()
+        selectedAtmospheres.addAll(savedAtmospheres.value)
+        selectedDishes.clear()
+        selectedDishes.addAll(savedDishes.value)
+    }
 
     val coroutineScope = rememberCoroutineScope()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        TextField(
-            value = cuisine,
-            onValueChange = { cuisine = it },
-            label = { Text("Favorite Cuisine") }
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        TextField(
-            value = atmosphere,
-            onValueChange = { atmosphere = it },
-            label = { Text("Preferred Atmosphere") }
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        TextField(
-            value = favoriteDish,
-            onValueChange = { favoriteDish = it },
-            label = { Text("Favorite Dish") }
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = {
-            // implement the logic to save these preferences later, for now println
-            println("Preferences saved: Cuisine=$cuisine, Atmosphere=$atmosphere, Dish=$favoriteDish")
-            coroutineScope.launch {
-                preferencesDataStore.savePreferences(cuisine, atmosphere, favoriteDish)
-                navController.navigate("suggestions")
+    Scaffold(
+        bottomBar = {
+            Button(
+                onClick = {
+                    coroutineScope.launch {
+                        preferencesDataStore.saveCuisines(selectedCuisines.toSet())
+                        preferencesDataStore.saveAtmospheres(selectedAtmospheres.toSet())
+                        preferencesDataStore.saveFavoriteDishes(selectedDishes.toSet())
+                        navController.navigate("suggestions")
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                content = { Text("Save Preferences") }
+            )
+        }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)
+        ) {
+            item { Text("Select your favorite cuisines:") }
+            items(cuisineOptions) { cuisine ->
+                CheckboxItem(
+                    item = cuisine,
+                    isSelected = selectedCuisines.contains(cuisineMappings[cuisine]),
+                    onItemClicked = { item ->
+                        val internalName = cuisineMappings[item] ?: item
+                        if (selectedCuisines.contains(internalName)) {
+                            selectedCuisines.remove(internalName)
+                        } else {
+                            selectedCuisines.add(internalName)
+                        }
+                    }
+                )
             }
-        }) {
-            Text("Save Preferences")
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            item { Text("Select your preferred atmospheres:") }
+            items(atmosphereOptions) { atmosphere ->
+                CheckboxItem(
+                    item = atmosphere,
+                    isSelected = selectedAtmospheres.contains(atmosphereMappings[atmosphere]),
+                    onItemClicked = { item ->
+                        val internalName = atmosphereMappings[item] ?: item
+                        if (selectedAtmospheres.contains(internalName)) {
+                            selectedAtmospheres.remove(internalName)
+                        } else {
+                            selectedAtmospheres.add(internalName)
+                        }
+                    }
+                )
+            }
+            item { Spacer(modifier = Modifier.height(16.dp)) }
+
+            item { Text("Select your favorite dishes:") }
+            items(favoriteDishOptions) { dish ->
+                CheckboxItem(
+                    item = dish,
+                    isSelected = selectedDishes.contains(dishMappings[dish]),
+                    onItemClicked = { item ->
+                        val internalName = dishMappings[item] ?: item
+                        if (selectedDishes.contains(internalName)) {
+                            selectedDishes.remove(internalName)
+                        } else {
+                            selectedDishes.add(internalName)
+                        }
+                    }
+                )
+            }
         }
     }
 }
 
 @Composable
+fun CheckboxItem(item: String, isSelected: Boolean, onItemClicked: (String) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .clickable { onItemClicked(item) },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            checked = isSelected,
+            onCheckedChange = { _ -> onItemClicked(item) }
+        )
+        Text(
+            text = item,
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(start = 8.dp)
+        )
+    }
+}
+
+
+
+@Composable
 fun SuggestionsScreen(navController: NavController, preferencesDataStore: PreferencesDataStore) {
-    val preferences by preferencesDataStore.preferences.collectAsState(initial = emptyList())
+
+    val selectedCuisines by preferencesDataStore.cuisinesFlow.collectAsState(initial = emptySet())
+    val selectedAtmospheres by preferencesDataStore.atmospheresFlow.collectAsState(initial = emptySet())
+    val selectedDishes by preferencesDataStore.favoriteDishesFlow.collectAsState(initial = emptySet())
 
     Column(
         modifier = Modifier
@@ -137,12 +245,15 @@ fun SuggestionsScreen(navController: NavController, preferencesDataStore: Prefer
         Text("Your Preferences", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(8.dp))
 
-        if (preferences.isNotEmpty()) {
-            PreferenceItem(label = "Cuisine:", value = preferences[0])
-            PreferenceItem(label = "Atmosphere:", value = preferences[1])
-            PreferenceItem(label = "Favorite Dish:", value = preferences[2])
-        } else {
-            Text("No preferences found")
+        // Display selected preferences
+        if (selectedCuisines.isNotEmpty()) {
+            Text("Favorite Cuisines: ${selectedCuisines.joinToString(", ")}")
+        }
+        if (selectedAtmospheres.isNotEmpty()) {
+            Text("Preferred Atmospheres: ${selectedAtmospheres.joinToString(", ")}")
+        }
+        if (selectedDishes.isNotEmpty()) {
+            Text("Favorite Dishes: ${selectedDishes.joinToString(", ")}")
         }
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = { navController.navigate("food") }) {
