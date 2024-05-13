@@ -51,6 +51,7 @@ android {
 
 dependencies {
 
+    implementation("com.google.android.gms:play-services-location:18.0.0")
     implementation("androidx.compose.material:material:1.6.7")
     implementation("androidx.datastore:datastore-preferences-android:1.1.0")
     implementation(libs.androidx.core.ktx)

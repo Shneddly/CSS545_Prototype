@@ -1,11 +1,17 @@
 package com.example.css545_prototype
 
+import android.Manifest
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.location.Location
 import android.net.Uri
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -25,6 +31,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -40,11 +47,14 @@ import androidx.compose.ui.semantics.Role.Companion.Checkbox
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.launch
+
 
 class MainActivity : ComponentActivity() {
     private val preferencesDataStore by lazy { PreferencesDataStore(context = this)}
@@ -73,13 +83,58 @@ fun NyoomApp(preferencesDataStore: PreferencesDataStore) {
 }
 
 @Composable
+fun LocationAwareContent(onLocation: @Composable (Location?) -> Unit) {
+    val context = LocalContext.current
+    var location by remember { mutableStateOf<Location?>(null) }
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            fetchLocation(context) { loc -> location = loc }
+        } else {
+            location = null // Handle permission denial by setting location to null
+        }
+    }
+
+    LaunchedEffect(key1 = true) {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        } else {
+            fetchLocation(context) { loc -> location = loc }
+        }
+    }
+
+    // Observe location changes and pass it to onLocation lambda
+    location?.let {
+        onLocation(it)
+    } ?: onLocation(null)
+}
+
+fun fetchLocation(context: Context, onLocationFetched: (Location?) -> Unit) {
+    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+    if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
+            onLocationFetched(location)
+        }.addOnFailureListener {
+            Log.e("LocationError", "Failed to get location", it)
+            onLocationFetched(null)
+        }
+    }
+}
+
+
+
+
+
+
+@Composable
 fun IntroScreen(navController: NavController) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("nyoom", style = MaterialTheme.typography.headlineMedium)
+        Text("Nyoom", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(16.dp))
         Button(onClick = { navController.navigate("cuisine") }) {
             Text("Let's Go!")
@@ -228,43 +283,71 @@ fun CheckboxItem(item: String, isSelected: Boolean, onItemClicked: (String) -> U
 
 
 
+//@Composable
+//fun SuggestionsScreen(navController: NavController, preferencesDataStore: PreferencesDataStore) {
+//
+//    val selectedCuisines by preferencesDataStore.cuisinesFlow.collectAsState(initial = emptySet())
+//    val selectedAtmospheres by preferencesDataStore.atmospheresFlow.collectAsState(initial = emptySet())
+//    val selectedDishes by preferencesDataStore.favoriteDishesFlow.collectAsState(initial = emptySet())
+//
+//    Column(
+//        modifier = Modifier
+//            .fillMaxSize()
+//            .padding(16.dp),
+//        horizontalAlignment = Alignment.CenterHorizontally,
+//        verticalArrangement = Arrangement.spacedBy(8.dp)
+//    ) {
+//        Text("Your Preferences", style = MaterialTheme.typography.headlineSmall)
+//        Spacer(modifier = Modifier.height(8.dp))
+//
+//        // Display selected preferences
+//        if (selectedCuisines.isNotEmpty()) {
+//            Text("Favorite Cuisines: ${selectedCuisines.joinToString(", ")}")
+//        }
+//        if (selectedAtmospheres.isNotEmpty()) {
+//            Text("Preferred Atmospheres: ${selectedAtmospheres.joinToString(", ")}")
+//        }
+//        if (selectedDishes.isNotEmpty()) {
+//            Text("Favorite Dishes: ${selectedDishes.joinToString(", ")}")
+//        }
+//        Spacer(modifier = Modifier.height(16.dp))
+//        Button(onClick = {
+//            // implement the logic to save these preferences later, for now println
+//            navController.navigate("suggestions")
+//        }) {
+//            Text("Save Preferences")
+//        }
+//    }
+//}
 @Composable
 fun SuggestionsScreen(navController: NavController, preferencesDataStore: PreferencesDataStore) {
-
-    val selectedCuisines by preferencesDataStore.cuisinesFlow.collectAsState(initial = emptySet())
-    val selectedAtmospheres by preferencesDataStore.atmospheresFlow.collectAsState(initial = emptySet())
-    val selectedDishes by preferencesDataStore.favoriteDishesFlow.collectAsState(initial = emptySet())
-
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
+        modifier = Modifier.fillMaxSize().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.Center
     ) {
-        Text("Your Preferences", style = MaterialTheme.typography.headlineSmall)
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Display selected preferences
-        if (selectedCuisines.isNotEmpty()) {
-            Text("Favorite Cuisines: ${selectedCuisines.joinToString(", ")}")
-        }
-        if (selectedAtmospheres.isNotEmpty()) {
-            Text("Preferred Atmospheres: ${selectedAtmospheres.joinToString(", ")}")
-        }
-        if (selectedDishes.isNotEmpty()) {
-            Text("Favorite Dishes: ${selectedDishes.joinToString(", ")}")
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { navController.navigate("food") }) {
-            Text("Suggest Me Food")
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-        Button(onClick = { navController.navigate("drinks") }) {
-            Text("Suggest Me Drinks")
+        LocationAwareContent { location ->
+            if (location != null) {
+                Text("Current Location: Lat ${location.latitude}, Long ${location.longitude}")
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = { navController.navigate("food") }) {
+                    Text("Suggest Me Food")
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = { navController.navigate("drinks") }) {
+                    Text("Suggest Me Drinks")
+                }
+            } else {
+                Text("Location permission needed or location is unavailable.")
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(onClick = { /* trigger location fetching again or open settings */ }) {
+                    Text("Retry Fetching Location")
+                }
+            }
         }
     }
 }
+
 
 @Composable
 fun PreferenceItem(label: String, value: String) {
