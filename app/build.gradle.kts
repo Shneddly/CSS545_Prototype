@@ -51,6 +51,8 @@ android {
 
 dependencies {
 
+    implementation("com.google.android.gms:play-services-location:18.0.0")
+    implementation("androidx.compose.material:material:1.6.7")
     implementation("androidx.datastore:datastore-preferences-android:1.1.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -63,7 +65,6 @@ dependencies {
     val nav_version = "2.7.7"
 
     implementation("androidx.navigation:navigation-compose:$nav_version")
-    implementation("com.google.android.gms:play-services-location:18.0.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
