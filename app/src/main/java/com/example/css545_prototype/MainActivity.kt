@@ -7,18 +7,20 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.net.Uri
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -28,78 +30,32 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import com.google.android.libraries.places.api.Places
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.Role.Companion.Checkbox
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import com.google.android.libraries.places.api.model.Place
+import com.google.android.libraries.places.api.net.FindCurrentPlaceRequest
+import com.google.android.libraries.places.api.net.PlacesClient
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
-import kotlin.coroutines.resume
-import kotlin.coroutines.suspendCoroutine
-
-
 
 class MainActivity : ComponentActivity() {
-    private val preferencesDataStore by lazy { PreferencesDataStore(context = this)}
+    private val preferencesDataStore by lazy { PreferencesDataStore.getInstance(context = this) }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-
         setContent {
-
             NyoomApp(preferencesDataStore = preferencesDataStore)
         }
-        // Define a variable to hold the Places API key.
-        val apiKey = BuildConfig.PLACES_API_KEY
 
-        // Log an error if apiKey is not set.
+        val apiKey = BuildConfig.PLACES_API_KEY
         if (apiKey.isEmpty() || apiKey == "DEFAULT_API_KEY") {
-            Log.e("Places test", "No api key")
+            Log.e("Places test", "No API key")
             finish()
             return
         }
-
-        // Initialize the SDK
-        Places.initializeWithNewPlacesApiEnabled(applicationContext, apiKey)
-
-        // Create a new PlacesClient instance
-        val placesClient = Places.createClient(this)
+        Places.initialize(applicationContext, apiKey)
     }
 }
 
@@ -111,20 +67,20 @@ fun NyoomApp(preferencesDataStore: PreferencesDataStore) {
 
     NavHost(navController, startDestination = "intro") {
         composable("intro") { IntroScreen(navController) }
-        composable("cuisine") { CuisineScreen(navController, preferencesDataStore, onNavigateToLocationChoice = {
-            navController.navigate("locationChoice")
-        }) }
-        composable("locationChoice") { LocationChoiceScreen(navController, context, onLocationSet = { loc ->
-            location = loc
-            navController.navigate("suggestions")
-        }) }
+        composable("cuisine") {
+            CuisineScreen(navController, preferencesDataStore, onNavigateToLocationChoice = {
+                navController.navigate("locationChoice")
+            })
+        }
+        composable("locationChoice") {
+            LocationChoiceScreen(navController, context, onLocationSet = { loc ->
+                location = loc
+                navController.navigate("suggestions")
+            })
+        }
         composable("suggestions") {
             SuggestionsScreen(navController, location)
         }
-        composable("food") { ResultsScreenFood(navController) }
-        composable("drinks") { ResultsScreenDrinks(navController) }
-        composable("rerollfood") { ReRollFood(navController) }
-        composable("rerolldrinks") { ReRollDrinks(navController) }
     }
 }
 
@@ -146,7 +102,6 @@ fun IntroScreen(navController: NavController) {
 @Composable
 fun CuisineScreen(navController: NavController, preferencesDataStore: PreferencesDataStore, onNavigateToLocationChoice: () -> Unit) {
     val cuisineOptions = listOf("Italian", "Mexican", "Chinese", "Indian", "Japanese")
-
     val cuisineMappings = mapOf(
         "Italian" to "italian_restaurant",
         "Mexican" to "mexican_restaurant",
@@ -154,9 +109,7 @@ fun CuisineScreen(navController: NavController, preferencesDataStore: Preference
         "Indian" to "indian_restaurant",
         "Japanese" to "japanese_restaurant"
     )
-
     val savedCuisines = preferencesDataStore.cuisinesFlow.collectAsState(initial = emptySet())
-
     val selectedCuisines = remember { mutableStateListOf<String>() }
 
     LaunchedEffect(savedCuisines) {
@@ -201,7 +154,6 @@ fun CuisineScreen(navController: NavController, preferencesDataStore: Preference
         }
     }
 }
-
 
 @Composable
 fun CheckboxItem(item: String, isSelected: Boolean, onItemClicked: (String) -> Unit) {
@@ -300,8 +252,6 @@ fun LocationChoiceScreen(navController: NavController, context: Context, onLocat
 }
 
 fun validateAndSetManualLocation(locationText: String, onLocationSet: (Location) -> Unit) {
-    // Implement a method to validate the address or city and convert it into a Location object
-    // This could involve calling a geocoding API to get the latitude and longitude
     val location = Location("manual").apply {
         latitude = 0.0 // Replace with actual latitude from geocoding result
         longitude = 0.0 // Replace with actual longitude from geocoding result
@@ -316,6 +266,7 @@ fun fetchLocation(context: Context, onLocationSet: (Location) -> Unit, onError: 
             if (location != null) {
                 onLocationSet(location)
             } else {
+                Log.e("LocationError", "Location is null")
                 onError("Failed to fetch location, try again or input location")
             }
         }.addOnFailureListener {
@@ -323,12 +274,42 @@ fun fetchLocation(context: Context, onLocationSet: (Location) -> Unit, onError: 
             onError("Failed to fetch location, try again or input location")
         }
     } else {
+        Log.e("PermissionError", "Location permission denied")
         onError("Location permission denied. Please try again or enter location manually.")
     }
 }
 
 @Composable
 fun SuggestionsScreen(navController: NavController, location: Location?) {
+    val context = LocalContext.current
+    val placesClient = Places.createClient(context)
+    var restaurantSuggestions by remember { mutableStateOf<List<Place>?>(null) }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(location) {
+        if (location != null) {
+            val preferencesDataStore = PreferencesDataStore.getInstance(context)
+
+            coroutineScope.launch {
+                preferencesDataStore.cuisinesFlow.collect { cuisinePreferences: Set<String> ->
+                    fetchRestaurantSuggestions(
+                        context,
+                        placesClient,
+                        location,
+                        cuisinePreferences,
+                        onSuccess = { places ->
+                            restaurantSuggestions = places
+                        },
+                        onFailure = { error ->
+                            errorMessage = error
+                        }
+                    )
+                }
+            }
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -339,15 +320,39 @@ fun SuggestionsScreen(navController: NavController, location: Location?) {
         if (location != null) {
             Text("Current Location: Lat ${location.latitude}, Long ${location.longitude}")
             Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = { navController.navigate("food") }) {
-                Text("Suggest Me Food")
+
+            if (restaurantSuggestions != null) {
+                LazyColumn {
+                    items(restaurantSuggestions!!) { place ->
+                        RestaurantItem(navController, place)
+                    }
+                }
+            } else {
+                CircularProgressIndicator()
             }
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = { navController.navigate("drinks") }) {
-                Text("Suggest Me Drinks")
+            errorMessage?.let {
+                Text(it, color = Color.Red)
             }
         } else {
             Text("No location available.")
+        }
+    }
+}
+
+@Composable
+fun RestaurantItem(navController: NavController, place: Place) {
+    Column(modifier = Modifier.padding(8.dp)) {
+        Text(place.name ?: "Unknown Restaurant", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+        Text(place.address ?: "Unknown Address")
+        Spacer(modifier = Modifier.height(8.dp))
+        Button(onClick = {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:${place.latLng?.latitude},${place.latLng?.longitude}?q=${place.name}"))
+            intent.setPackage("com.google.android.apps.maps")
+            if (intent.resolveActivity(navController.context.packageManager) != null) {
+                navController.context.startActivity(intent)
+            }
+        }) {
+            Text("Take Me!!!!")
         }
     }
 }
@@ -368,84 +373,43 @@ fun TakeMeButton(url: String) {
     }
 }
 
-@Composable
-fun ResultsScreenFood(navController: NavController) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("NUE", fontSize = 25.sp, fontWeight = FontWeight.Bold)
-        Text("1519 14th Ave,")
-        Text("Seattle, WA 98122")
+fun fetchRestaurantSuggestions(
+    context: Context,
+    placesClient: PlacesClient,
+    location: Location,
+    cuisinePreferences: Set<String>,
+    onSuccess: (List<Place>) -> Unit,
+    onFailure: (String) -> Unit
+) {
+    val permission = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
 
-        Spacer(modifier = Modifier.height(16.dp))
-        Row {
-            TakeMeButton("https://www.google.com/maps/place/Nue/@47.6147255,-122.317023,17z/data=!4m6!3m5!1s0x54906acdfa55ddcf:0xaa8c3f43520ea04d!8m2!3d47.6147255!4d-122.3144481!16s%2Fg%2F11b6ds3khs?entry=ttu")
-            Button(onClick = { navController.navigate("rerollfood") }) {
-                Text("Re-Roll")
+    if (permission == PackageManager.PERMISSION_GRANTED) {
+        // Create a list of place types based on cuisine preferences
+        val placeTypes = cuisinePreferences.map { Place.Type.RESTAURANT }
+
+        // Define the fields to return
+        val placeFields = listOf(Place.Field.NAME, Place.Field.ADDRESS, Place.Field.LAT_LNG, Place.Field.TYPES)
+
+        // Create a FindCurrentPlaceRequest
+        val request = FindCurrentPlaceRequest.newInstance(placeFields)
+
+        // Fetch current place response
+        val placeResponse = placesClient.findCurrentPlace(request)
+
+        placeResponse.addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val response = task.result
+                val filteredPlaces = response.placeLikelihoods.filter { likelihood ->
+                    likelihood.place.types?.any { it in placeTypes } == true
+                }.map { it.place }
+                onSuccess(filteredPlaces)
+            } else {
+                Log.e("FetchError", "Failed to fetch restaurant suggestions", task.exception)
+                onFailure(task.exception?.message ?: "Failed to fetch restaurant suggestions")
             }
         }
+    } else {
+        Log.e("PermissionError", "Location permission not granted")
+        onFailure("Location permission not granted")
     }
-}
-
-@Composable
-fun ReRollFood(navController: NavController) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("Dick's Drive-In", fontSize = 25.sp, fontWeight = FontWeight.Bold)
-        Text("115 Broadway E,")
-        Text("Seattle, WA 98102")
-    }
-}
-
-@Composable
-fun ResultsScreenDrinks(navController: NavController) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("Montana", fontSize = 50.sp, fontWeight = FontWeight.Bold)
-        Text("1506 E Olive Way,")
-        Text("Seattle, WA 98122")
-
-        Spacer(modifier = Modifier.height(16.dp))
-        Row {
-            TakeMeButton("https://www.google.com/maps/place/Montana/@47.6177032,-122.3274541,17z/data=!4m10!1m2!2m1!1sMontana!3m6!1s0x54906acafa5a22eb:0xfff92a473406768b!8m2!3d47.6177032!4d-122.3252654!15sCgdNb250YW5hkgEQYmFydF9zdXBwbHlfcmVzdGF1cmFudPoBJENoZERTVWhOTUc5blMwVkpRMEZuU1VSYWNrbFplbU4wU1VOQlJSQUI?hl=en&entry=ttu")
-            Button(onClick = { navController.navigate("rerolldrinks") }) {
-                Text("Re-Roll")
-            }
-        }
-    }
-}
-
-@Composable
-fun ReRollDrinks(navController: NavController) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("Zig Zag Café", fontSize = 50.sp, fontWeight = FontWeight.Bold)
-        Text("1501 Western Ave Ste 202,")
-        Text("Seattle, WA 98101")
-    }
-}
-
-fun fetchRestaurantSuggestions(location: Location): List<String> {
-    // Implement the logic to fetch restaurant suggestions from the Google Places API
-    // This is a placeholder implementation
-    return listOf("Restaurant 1", "Restaurant 2", "Restaurant 3")
 }
