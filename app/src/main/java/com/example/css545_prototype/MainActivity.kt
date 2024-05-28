@@ -74,6 +74,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 
+
 class MainActivity : ComponentActivity() {
     private val preferencesDataStore by lazy { PreferencesDataStore(context = this)}
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -145,8 +146,6 @@ fun IntroScreen(navController: NavController) {
 @Composable
 fun CuisineScreen(navController: NavController, preferencesDataStore: PreferencesDataStore, onNavigateToLocationChoice: () -> Unit) {
     val cuisineOptions = listOf("Italian", "Mexican", "Chinese", "Indian", "Japanese")
-    val atmosphereOptions = listOf("Casual", "Formal", "Outdoor", "Indoor")
-    val favoriteDishOptions = listOf("Pizza", "Sushi", "Burger")
 
     val cuisineMappings = mapOf(
         "Italian" to "italian_restaurant",
@@ -156,34 +155,13 @@ fun CuisineScreen(navController: NavController, preferencesDataStore: Preference
         "Japanese" to "japanese_restaurant"
     )
 
-    val atmosphereMappings = mapOf(
-        "Casual" to "casual",
-        "Formal" to "formal",
-        "Outdoor" to "outdoor",
-        "Indoor" to "indoor"
-    )
-
-    val dishMappings = mapOf(
-        "Pizza" to "pizza_restaurant",
-        "Sushi" to "sushi_restaurant",
-        "Burger" to "hamburger_restaurant"
-    )
-
     val savedCuisines = preferencesDataStore.cuisinesFlow.collectAsState(initial = emptySet())
-    val savedAtmospheres = preferencesDataStore.atmospheresFlow.collectAsState(initial = emptySet())
-    val savedDishes = preferencesDataStore.favoriteDishesFlow.collectAsState(initial = emptySet())
 
     val selectedCuisines = remember { mutableStateListOf<String>() }
-    val selectedAtmospheres = remember { mutableStateListOf<String>() }
-    val selectedDishes = remember { mutableStateListOf<String>() }
 
-    LaunchedEffect(savedCuisines, savedAtmospheres, savedDishes) {
+    LaunchedEffect(savedCuisines) {
         selectedCuisines.clear()
         selectedCuisines.addAll(savedCuisines.value)
-        selectedAtmospheres.clear()
-        selectedAtmospheres.addAll(savedAtmospheres.value)
-        selectedDishes.clear()
-        selectedDishes.addAll(savedDishes.value)
     }
 
     val coroutineScope = rememberCoroutineScope()
@@ -194,8 +172,6 @@ fun CuisineScreen(navController: NavController, preferencesDataStore: Preference
                 onClick = {
                     coroutineScope.launch {
                         preferencesDataStore.saveCuisines(selectedCuisines.toSet())
-                        preferencesDataStore.saveAtmospheres(selectedAtmospheres.toSet())
-                        preferencesDataStore.saveFavoriteDishes(selectedDishes.toSet())
                         onNavigateToLocationChoice()
                     }
                 },
@@ -222,43 +198,10 @@ fun CuisineScreen(navController: NavController, preferencesDataStore: Preference
                     }
                 )
             }
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            item { Text("Select your preferred atmospheres:") }
-            items(atmosphereOptions) { atmosphere ->
-                CheckboxItem(
-                    item = atmosphere,
-                    isSelected = selectedAtmospheres.contains(atmosphereMappings[atmosphere]),
-                    onItemClicked = { item ->
-                        val internalName = atmosphereMappings[item] ?: item
-                        if (selectedAtmospheres.contains(internalName)) {
-                            selectedAtmospheres.remove(internalName)
-                        } else {
-                            selectedAtmospheres.add(internalName)
-                        }
-                    }
-                )
-            }
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            item { Text("Select your favorite dishes:") }
-            items(favoriteDishOptions) { dish ->
-                CheckboxItem(
-                    item = dish,
-                    isSelected = selectedDishes.contains(dishMappings[dish]),
-                    onItemClicked = { item ->
-                        val internalName = dishMappings[item] ?: item
-                        if (selectedDishes.contains(internalName)) {
-                            selectedDishes.remove(internalName)
-                        } else {
-                            selectedDishes.add(internalName)
-                        }
-                    }
-                )
-            }
         }
     }
 }
+
 
 @Composable
 fun CheckboxItem(item: String, isSelected: Boolean, onItemClicked: (String) -> Unit) {
