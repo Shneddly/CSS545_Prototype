@@ -313,11 +313,7 @@ fun LocationChoiceScreen(navController: NavController, context: Context, onLocat
             )
             Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = {
-                val location = Location("manual").apply {
-                    latitude = 0.0
-                    longitude = 0.0
-                }
-                onLocationSet(location)
+                validateAndSetManualLocation(locationText, onLocationSet)
                 navController.navigate("suggestions")
             }) {
                 Text("Use Manual Location")
@@ -339,6 +335,16 @@ fun LocationChoiceScreen(navController: NavController, context: Context, onLocat
             }
         }
     }
+}
+
+fun validateAndSetManualLocation(locationText: String, onLocationSet: (Location) -> Unit) {
+    // Implement a method to validate the address or city and convert it into a Location object
+    // This could involve calling a geocoding API to get the latitude and longitude
+    val location = Location("manual").apply {
+        latitude = 0.0 // Replace with actual latitude from geocoding result
+        longitude = 0.0 // Replace with actual longitude from geocoding result
+    }
+    onLocationSet(location)
 }
 
 fun fetchLocation(context: Context, onLocationSet: (Location) -> Unit, onError: (String) -> Unit) {
@@ -474,4 +480,10 @@ fun ReRollDrinks(navController: NavController) {
         Text("1501 Western Ave Ste 202,")
         Text("Seattle, WA 98101")
     }
+}
+
+fun fetchRestaurantSuggestions(location: Location): List<String> {
+    // Implement the logic to fetch restaurant suggestions from the Google Places API
+    // This is a placeholder implementation
+    return listOf("Restaurant 1", "Restaurant 2", "Restaurant 3")
 }
