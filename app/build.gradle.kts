@@ -60,7 +60,8 @@ dependencies {
     implementation("androidx.compose.material:material:1.6.7")
     implementation("androidx.datastore:datastore-preferences-android:1.1.0")
     implementation(platform("org.jetbrains.kotlin:kotlin-bom:1.9.0"))
-    implementation("com.google.android.libraries.places:places:3.3.0")
+    implementation("com.google.android.libraries.places:places:3.5.0")
+    implementation ("com.google.android.gms:play-services-maps:17.0.0")
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

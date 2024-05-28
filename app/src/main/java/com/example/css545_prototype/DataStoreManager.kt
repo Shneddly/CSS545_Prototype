@@ -5,11 +5,10 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
-
 import kotlinx.coroutines.flow.map
 
-
 class PreferencesDataStore(private val context: Context) {
+
     private val Context.dataStore by preferencesDataStore(name = "user_preferences")
 
     val cuisinesFlow: Flow<Set<String>> = context.dataStore.data.map { preferences ->
@@ -46,5 +45,16 @@ class PreferencesDataStore(private val context: Context) {
         private val KEY_CUISINES = stringSetPreferencesKey("key_cuisines")
         private val KEY_ATMOSPHERES = stringSetPreferencesKey("key_atmospheres")
         private val KEY_FAVORITE_DISHES = stringSetPreferencesKey("key_favorite_dishes")
+
+        @Volatile
+        private var INSTANCE: PreferencesDataStore? = null
+
+        fun getInstance(context: Context): PreferencesDataStore {
+            return INSTANCE ?: synchronized(this) {
+                val instance = PreferencesDataStore(context)
+                INSTANCE = instance
+                instance
+            }
+        }
     }
 }
