@@ -53,6 +53,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import com.google.android.libraries.places.api.Places
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -72,14 +73,33 @@ import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
+
+
 class MainActivity : ComponentActivity() {
     private val preferencesDataStore by lazy { PreferencesDataStore(context = this)}
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+
         setContent {
 
             NyoomApp(preferencesDataStore = preferencesDataStore)
         }
+        // Define a variable to hold the Places API key.
+        val apiKey = BuildConfig.PLACES_API_KEY
+
+        // Log an error if apiKey is not set.
+        if (apiKey.isEmpty() || apiKey == "DEFAULT_API_KEY") {
+            Log.e("Places test", "No api key")
+            finish()
+            return
+        }
+
+        // Initialize the SDK
+        Places.initializeWithNewPlacesApiEnabled(applicationContext, apiKey)
+
+        // Create a new PlacesClient instance
+        val placesClient = Places.createClient(this)
     }
 }
 
@@ -126,8 +146,6 @@ fun IntroScreen(navController: NavController) {
 @Composable
 fun CuisineScreen(navController: NavController, preferencesDataStore: PreferencesDataStore, onNavigateToLocationChoice: () -> Unit) {
     val cuisineOptions = listOf("Italian", "Mexican", "Chinese", "Indian", "Japanese")
-    val atmosphereOptions = listOf("Casual", "Formal", "Outdoor", "Indoor")
-    val favoriteDishOptions = listOf("Pizza", "Sushi", "Burger")
 
     val cuisineMappings = mapOf(
         "Italian" to "italian_restaurant",
@@ -137,34 +155,13 @@ fun CuisineScreen(navController: NavController, preferencesDataStore: Preference
         "Japanese" to "japanese_restaurant"
     )
 
-    val atmosphereMappings = mapOf(
-        "Casual" to "casual",
-        "Formal" to "formal",
-        "Outdoor" to "outdoor",
-        "Indoor" to "indoor"
-    )
-
-    val dishMappings = mapOf(
-        "Pizza" to "pizza_restaurant",
-        "Sushi" to "sushi_restaurant",
-        "Burger" to "hamburger_restaurant"
-    )
-
     val savedCuisines = preferencesDataStore.cuisinesFlow.collectAsState(initial = emptySet())
-    val savedAtmospheres = preferencesDataStore.atmospheresFlow.collectAsState(initial = emptySet())
-    val savedDishes = preferencesDataStore.favoriteDishesFlow.collectAsState(initial = emptySet())
 
     val selectedCuisines = remember { mutableStateListOf<String>() }
-    val selectedAtmospheres = remember { mutableStateListOf<String>() }
-    val selectedDishes = remember { mutableStateListOf<String>() }
 
-    LaunchedEffect(savedCuisines, savedAtmospheres, savedDishes) {
+    LaunchedEffect(savedCuisines) {
         selectedCuisines.clear()
         selectedCuisines.addAll(savedCuisines.value)
-        selectedAtmospheres.clear()
-        selectedAtmospheres.addAll(savedAtmospheres.value)
-        selectedDishes.clear()
-        selectedDishes.addAll(savedDishes.value)
     }
 
     val coroutineScope = rememberCoroutineScope()
@@ -175,8 +172,6 @@ fun CuisineScreen(navController: NavController, preferencesDataStore: Preference
                 onClick = {
                     coroutineScope.launch {
                         preferencesDataStore.saveCuisines(selectedCuisines.toSet())
-                        preferencesDataStore.saveAtmospheres(selectedAtmospheres.toSet())
-                        preferencesDataStore.saveFavoriteDishes(selectedDishes.toSet())
                         onNavigateToLocationChoice()
                     }
                 },
@@ -203,43 +198,10 @@ fun CuisineScreen(navController: NavController, preferencesDataStore: Preference
                     }
                 )
             }
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            item { Text("Select your preferred atmospheres:") }
-            items(atmosphereOptions) { atmosphere ->
-                CheckboxItem(
-                    item = atmosphere,
-                    isSelected = selectedAtmospheres.contains(atmosphereMappings[atmosphere]),
-                    onItemClicked = { item ->
-                        val internalName = atmosphereMappings[item] ?: item
-                        if (selectedAtmospheres.contains(internalName)) {
-                            selectedAtmospheres.remove(internalName)
-                        } else {
-                            selectedAtmospheres.add(internalName)
-                        }
-                    }
-                )
-            }
-            item { Spacer(modifier = Modifier.height(16.dp)) }
-
-            item { Text("Select your favorite dishes:") }
-            items(favoriteDishOptions) { dish ->
-                CheckboxItem(
-                    item = dish,
-                    isSelected = selectedDishes.contains(dishMappings[dish]),
-                    onItemClicked = { item ->
-                        val internalName = dishMappings[item] ?: item
-                        if (selectedDishes.contains(internalName)) {
-                            selectedDishes.remove(internalName)
-                        } else {
-                            selectedDishes.add(internalName)
-                        }
-                    }
-                )
-            }
         }
     }
 }
+
 
 @Composable
 fun CheckboxItem(item: String, isSelected: Boolean, onItemClicked: (String) -> Unit) {
@@ -313,11 +275,7 @@ fun LocationChoiceScreen(navController: NavController, context: Context, onLocat
             )
             Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = {
-                val location = Location("manual").apply {
-                    latitude = 0.0
-                    longitude = 0.0
-                }
-                onLocationSet(location)
+                validateAndSetManualLocation(locationText, onLocationSet)
                 navController.navigate("suggestions")
             }) {
                 Text("Use Manual Location")
@@ -339,6 +297,16 @@ fun LocationChoiceScreen(navController: NavController, context: Context, onLocat
             }
         }
     }
+}
+
+fun validateAndSetManualLocation(locationText: String, onLocationSet: (Location) -> Unit) {
+    // Implement a method to validate the address or city and convert it into a Location object
+    // This could involve calling a geocoding API to get the latitude and longitude
+    val location = Location("manual").apply {
+        latitude = 0.0 // Replace with actual latitude from geocoding result
+        longitude = 0.0 // Replace with actual longitude from geocoding result
+    }
+    onLocationSet(location)
 }
 
 fun fetchLocation(context: Context, onLocationSet: (Location) -> Unit, onError: (String) -> Unit) {
@@ -474,4 +442,10 @@ fun ReRollDrinks(navController: NavController) {
         Text("1501 Western Ave Ste 202,")
         Text("Seattle, WA 98101")
     }
+}
+
+fun fetchRestaurantSuggestions(location: Location): List<String> {
+    // Implement the logic to fetch restaurant suggestions from the Google Places API
+    // This is a placeholder implementation
+    return listOf("Restaurant 1", "Restaurant 2", "Restaurant 3")
 }

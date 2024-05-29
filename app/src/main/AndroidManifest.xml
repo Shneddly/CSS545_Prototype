@@ -18,6 +18,10 @@
         android:theme="@style/Theme.CSS545_Prototype"
         tools:targetApi="31">
 
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${PLACES_API_KEY}" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
