@@ -49,6 +49,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.startActivity
 import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -175,13 +176,18 @@ fun CuisineScreen(navController: NavController, preferencesDataStore: Preference
                         onNavigateToLocationChoice()
                     }
                 },
-                modifier = Modifier.fillMaxWidth().padding(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
                 content = { Text("Save Preferences") }
             )
         }
     ) { padding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(horizontal = 16.dp)
         ) {
             item { Text("Select your favorite cuisines:") }
             items(cuisineOptions) { cuisine ->
@@ -256,15 +262,20 @@ fun LocationChoiceScreen(navController: NavController, context: Context, onLocat
 
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("Choose Location") })
+            //TopAppBar(title = { Text("Choose Location") })
         }
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("Enter your location manually or use your current location:", style = MaterialTheme.typography.headlineSmall)
+
+            // commented out manual location selection
+/*            Text("Enter your location manually or use your current location:", style = MaterialTheme.typography.headlineSmall)
             Spacer(modifier = Modifier.height(16.dp))
             TextField(
                 value = locationText,
@@ -279,12 +290,12 @@ fun LocationChoiceScreen(navController: NavController, context: Context, onLocat
             }) {
                 Text("Use Manual Location")
             }
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))*/
             Button(onClick = {
                 isFetching = true
                 permissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             }) {
-                Text("Use Current Location")
+                Text("Send Location")
             }
             errorMessage?.let {
                 Spacer(modifier = Modifier.height(16.dp))
@@ -360,7 +371,7 @@ fun SuggestionsScreen(navController: NavController, location: Location?) {
         verticalArrangement = Arrangement.Center
     ) {
         if (location != null) {
-            Text("Current Location: Lat ${location.latitude}, Long ${location.longitude}")
+            //Text("Current Location: Lat ${location.latitude}, Long ${location.longitude}")
             Spacer(modifier = Modifier.height(16.dp))
 
             restaurantSuggestions?.let { places ->
@@ -386,23 +397,36 @@ fun SuggestionsScreen(navController: NavController, location: Location?) {
 
 @Composable
 fun RestaurantItem(navController: NavController, place: Place) {
-    Column(modifier = Modifier.padding(8.dp)) {
+
+    Column(
+        modifier = Modifier.padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    )
+    {
         Text(place.name ?: "Unknown Restaurant", fontSize = 20.sp, fontWeight = FontWeight.Bold)
         Text(place.address ?: "Unknown Address")
         Spacer(modifier = Modifier.height(8.dp))
+
+        // set context of current state
+        // and set location to send to google maps
+        val context = LocalContext.current
+        val location = Uri.parse("geo:0,0?q=${Uri.encode(place.address)}")
+
         Button(onClick = {
-            place.latLng?.let { latLng ->
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("geo:${latLng.latitude},${latLng.longitude}?q=${Uri.encode(place.name)}"))
-                intent.setPackage("com.google.android.apps.maps")
-                if (intent.resolveActivity(navController.context.packageManager) != null) {
-                    navController.context.startActivity(intent)
-                }
-            }
-        }) {
+
+            // create intent and send to google maps
+            val mapIntent = Intent(Intent.ACTION_VIEW, location)
+            mapIntent.setPackage("com.google.android.apps.maps")
+            context.startActivity(mapIntent)
+
+        }
+        ) {
             Text("Take Me There!")
         }
     }
 }
+
 
 @Composable
 fun TakeMeButton(url: String) {
