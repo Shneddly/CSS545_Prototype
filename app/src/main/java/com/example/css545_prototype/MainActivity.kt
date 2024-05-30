@@ -125,14 +125,37 @@ fun IntroScreen(navController: NavController) {
 
 @Composable
 fun CuisineScreen(navController: NavController, preferencesDataStore: PreferencesDataStore, onNavigateToLocationChoice: () -> Unit) {
-    val cuisineOptions = listOf("Italian", "Mexican", "Chinese", "Indian", "Japanese")
-    val cuisineMappings = mapOf(
-        "Italian" to "italian_restaurant",
-        "Mexican" to "mexican_restaurant",
-        "Chinese" to "chinese_restaurant",
-        "Indian" to "indian_restaurant",
-        "Japanese" to "japanese_restaurant"
-    )
+    val cuisineOptions = listOf(
+        "American",
+        "Brazilian",
+        "Chinese",
+        "French",
+        "Greek",
+        "Hamburger",
+        "Indian",
+        "Indonesian",
+        "Italian",
+        "Japanese",
+        "Korean",
+        "Lebanese",
+        "Mediterranean",
+        "Mexican",
+        "Pizza",
+        "Ramen",
+        "Seafood",
+        "Sushi",
+        "Thai",
+        "Vietnamese")
+//    val cuisineMappings = mapOf(
+//        "Italian" to "italian_restaurant",
+//        "Mexican" to "mexican_restaurant",
+//        "Chinese" to "chinese_restaurant",
+//        "Indian" to "indian_restaurant",
+//        "Japanese" to "japanese_restaurant",
+//        "American" to "american_restaurant",
+//        "Brazilian" to "brazilian_restaurant"
+//        "French" to ""
+//    )
     val savedCuisines = preferencesDataStore.cuisinesFlow.collectAsState(initial = emptySet())
     val selectedCuisines = remember { mutableStateListOf<String>() }
 
@@ -164,9 +187,9 @@ fun CuisineScreen(navController: NavController, preferencesDataStore: Preference
             items(cuisineOptions) { cuisine ->
                 CheckboxItem(
                     item = cuisine,
-                    isSelected = selectedCuisines.contains(cuisineMappings[cuisine]),
+                    isSelected = selectedCuisines.contains(cuisine),
                     onItemClicked = { item ->
-                        val internalName = cuisineMappings[item] ?: item
+                        val internalName = cuisine
                         if (selectedCuisines.contains(internalName)) {
                             selectedCuisines.remove(internalName)
                         } else {
@@ -277,8 +300,9 @@ fun LocationChoiceScreen(navController: NavController, context: Context, onLocat
 
 fun validateAndSetManualLocation(locationText: String, onLocationSet: (Location) -> Unit) {
     val location = Location("manual").apply {
-        latitude = 0.0 // Replace with actual latitude from geocoding result
-        longitude = 0.0 // Replace with actual longitude from geocoding result
+        latitude = 47.7557230642877 // Replace with actual latitude from geocoding result
+        longitude = -122.36531754147045 // Replace with actual longitude from geocoding result
+
     }
     onLocationSet(location)
 }
@@ -411,7 +435,7 @@ fun fetchRestaurantSuggestions(
     val circle = CircularBounds.newInstance(center, 5000.0)  // radius in meters
 
     // Define types to include based on selected cuisines
-    val includedTypes = cuisinePreferences.map { "${it.toLowerCase()}" }
+    val includedTypes = cuisinePreferences.map { "${it.lowercase()}_restaurant" }
 
     // Build the Nearby Search request
     val searchNearbyRequest = SearchNearbyRequest.builder(circle, placeFields)
